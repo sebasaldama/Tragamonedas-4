@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Tragamonedas Escolar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  background: radial-gradient(circle, #222, #000);
+  color: white;
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+
+.machine {
+  background: #111;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 0 25px gold;
+  text-align: center;
+  width: 100%;
+  max-width: 420px;
+}
+
+.reels {
+  display: flex;
+  justify-content: center;
+  margin: 15px 0;
+}
+
+.reel {
+  width: 80px;
+  height: 80px;
+  background: white;
+  border: 3px solid gold;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 10px;
+}
+
+.reel img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+}
+
+input {
+  width: 140px;
+  padding: 6px;
+  font-size: 16px;
+  text-align: center;
+  border-radius: 6px;
+  border: none;
+}
+
+button {
+  background: gold;
+  border: none;
+  padding: 12px 30px;
+  font-size: 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 10px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:hover:not(:disabled) {
+  background: orange;
+}
+
+button:disabled {
+  background: #777;
+  cursor: not-allowed;
+}
+
+table {
+  width: 100%;
+  margin-top: 15px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th, td {
+  border: 1px solid gold;
+  padding: 6px;
+}
+
+th {
+  background: #330;
+}
+
+#msg {
+  margin-top: 12px;
+  font-size: 18px;
+  min-height: 40px;
+}
+
+@media (min-width: 768px) {
+  .machine {
+    max-width: 520px;
+  }
+
+  .reel {
+    width: 110px;
+    height: 110px;
+  }
+
+  button {
+    font-size: 20px;
+    padding: 16px 40px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="machine">
+  <h1>🎰 Tragamonedas</h1>
+
+  <p>Apuesta (fichas)</p>
+  <input type="number" id="bet" min="1" placeholder="Ej. 20">
+
+  <div class="reels">
+    <div class="reel" id="r1" src="Imagenes_frutas/Cereza.jpeg"></div>
+    <div class="reel" id="r2"></div>
+    <div class="reel" id="r3"></div>
+  </div>
+
+  <button id="spinBtn">GIRAR</button>
+
+  <p id="msg"></p>
+
+  <table>
+    <tr>
+      <th>Resultado</th>
+      <th>Pago</th>
+    </tr>
+    <tr>
+      <td>Trío</td>
+      <td>x2</td>
+    </tr>
+  </table>
+</div>
+
+<audio id="spinSound" src="https://assets.mixkit.co/sfx/preview/mixkit-slot-machine-spin-1930.mp3"></audio>
+<audio id="winSound" src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"></audio>
+
+<script>
+// =======================
+// 🎰 SÍMBOLOS PERSONALIZADOS
+// =======================
+
+const weightedSymbols = [
+  "Imagenes_4/limon.jpeg","Imagenes_4/limon.jpeg","Imagenes_4/limon.jpeg",
+  "Imagenes_4/naranja.jpeg","Imagenes_4/naranja.jpeg","Imagenes_4/naranja.jpeg",
+  "Imagenes_4/mora.jpeg","Imagenes_4/mora.jpeg",
+  "Imagenes_4/platano.jpeg","Imagenes_4/platano.jpeg",
+  "Imagenes_4/siete.jpeg",
+  "Imagenes_4/barbarbar.jpeg"
+];
+
+// =======================
+// ⚙️ CONFIG
+// =======================
+
+const reels = [
+  document.getElementById("r1"),
+  document.getElementById("r2"),
+  document.getElementById("r3")
+];
+
+const betInput = document.getElementById("bet");
+const msg = document.getElementById("msg");
+const btn = document.getElementById("spinBtn");
+const spinSound = document.getElementById("spinSound");
+const winSound = document.getElementById("winSound");
+
+let spinning = false;
+
+// =======================
+// 🎲 LÓGICA
+// =======================
+
+function randomSymbol() {
+  return weightedSymbols[Math.floor(Math.random() * weightedSymbols.length)];
+}
+
+function setSymbol(reel, symbol) {
+  reel.innerHTML = `<img src="${symbol}" alt="">`;
+}
+
+function spin() {
+  if (spinning) return;
+
+  const bet = parseFloat(betInput.value);
+  if (!bet || bet <= 0) {
+    msg.textContent = "❗ Ingresa una apuesta válida";
+    return;
+  }
+
+  spinning = true;
+  btn.disabled = true;
+  msg.textContent = "🎰 Girando...";
+
+  spinSound.currentTime = 0;
+  spinSound.play();
+
+  let finished = 0;
+
+  reels.forEach((reel, i) => {
+    let count = 0;
+    const max = 15 + i * 5;
+
+    const interval = setInterval(() => {
+      setSymbol(reel, randomSymbol());
+      count++;
+
+      if (count >= max) {
+        clearInterval(interval);
+        finished++;
+        if (finished === 3) evaluate(bet);
+      }
+    }, 90);
+  });
+}
+
+function evaluate(bet) {
+  const values = reels.map(r => r.querySelector("img").src);
+
+  if (values[0] === values[1] && values[1] === values[2]) {
+    const payout = bet * 2;
+    winSound.play();
+    msg.innerHTML = `🎉 <b>GANASTE</b> 🎉<br>Pago: <b>${payout}</b> fichas (x2)`;
+  } else {
+    msg.textContent = "😢 No ganó esta vez";
+  }
+
+  spinning = false;
+  btn.disabled = false;
+}
+
+// Laptop + tablet
+btn.addEventListener("click", spin);
+btn.addEventListener("touchstart", e => {
+  e.preventDefault();
+  spin();
+});
+</script>
+
+</body>
+</html>
